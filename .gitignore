@@ -1,0 +1,6 @@
+.idea
+/target
+/https:
+*.jar
+build/
+*.class
