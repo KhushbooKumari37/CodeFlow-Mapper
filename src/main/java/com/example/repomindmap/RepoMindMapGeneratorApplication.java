@@ -1,7 +1,9 @@
 package com.example.repomindmap;
 
+import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.util.GitCloneUtil;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -10,6 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+
+import static java.lang.reflect.Modifier.TRANSIENT;
 
 @SpringBootApplication
 public class RepoMindMapGeneratorApplication implements CommandLineRunner {
@@ -23,20 +27,20 @@ public class RepoMindMapGeneratorApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String repoUrl = "https://github.com/alexmanrique/spring-boot-application-example.git";
+        String repoUrl = "https://github.com/alexmanrique/spring-boot-application-example";
 
         try {
-            String mindMapJson = generateMindMap(repoUrl);
+            String mindMapJson = generateMindMap(repoUrl).toString();
             System.out.println("Generated Mind Map:");
             System.out.println(mindMapJson);
         } catch (Exception e) {
-            System.err.println("Error generating mind map: " + e.getMessage());
+            System.err.println("Error generating mind map: " + e);
         }
     }
 
-    public String generateMindMap(String repoUrl) {
+    public Map<String,ClassOrInterfaceNode> generateMindMap(String repoUrl) {
         File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
-        Map<String, List<Object>> mindMap = RepoMindMapGenerator.generateMindMap(clonedRepo);
-        return new Gson().toJson(mindMap);
+        Map<String, ClassOrInterfaceNode> mindMap = RepoMindMapGenerator.generateMindMap(clonedRepo);
+        return mindMap;
     }
 }
