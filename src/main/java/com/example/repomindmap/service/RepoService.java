@@ -20,4 +20,3 @@ public class RepoService {
     return new Gson().toJson(mindMap);
   }
 }
-

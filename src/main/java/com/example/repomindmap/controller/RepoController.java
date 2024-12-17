@@ -11,22 +11,22 @@ import java.util.Map;
 @RequestMapping("/api")
 public class RepoController {
 
-  @Autowired
-  private RepoService repoService;
+    @Autowired
+    private RepoService repoService;
 
-  @PostMapping("/generate-mindmap")
-  public ResponseEntity<String> generateMindMap(@RequestBody Map<String, String> request) {
-    String repoUrl = request.get("repoUrl");
+    @PostMapping("/generate-mindmap")
+    public ResponseEntity<String> generateMindMap(@RequestBody Map<String, String> request) {
+        String repoUrl = request.get("repoUrl");
 
-    if (repoUrl == null || repoUrl.isEmpty()) {
-      return new ResponseEntity<>("Repository URL is required.", HttpStatus.BAD_REQUEST);
+        if (repoUrl == null || repoUrl.isEmpty()) {
+            return new ResponseEntity<>("Repository URL is required.", HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            String mindMapJson = repoService.generateMindMap(repoUrl);
+            return new ResponseEntity<>(mindMapJson, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error generating mind map: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-
-    try {
-      String mindMapJson = repoService.generateMindMap(repoUrl);
-      return new ResponseEntity<>(mindMapJson, HttpStatus.OK);
-    } catch (Exception e) {
-      return new ResponseEntity<>("Error generating mind map: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
 }
