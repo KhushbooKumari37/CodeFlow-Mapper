@@ -1,6 +1,7 @@
 package com.example.repomindmap.controller;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.cache.RepoCache;
+import com.example.repomindmap.model.MethodNode;
 import com.example.repomindmap.request.RepoNodeRequest;
 import com.example.repomindmap.service.RepoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,11 +10,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api")
@@ -21,7 +25,6 @@ public class RepoController {
 
     @Autowired
     private RepoService repoService;
-
     @Autowired
     private RepoCache repoCache;
 
@@ -95,4 +98,111 @@ public class RepoController {
         }
     }
 
+
+    @PostMapping("/repo/getParentInterfaces")
+    public ResponseEntity<List<ClassOrInterfaceNode>> getParentInterfaces(@RequestBody RepoNodeRequest request) {
+        try {
+            Map<String, ClassOrInterfaceNode> mindMap = repoCache.getRepoData(request.getRepoUrl())
+                    .orElseThrow(() -> new NoSuchElementException("Repository data not found"))
+                    .getMindMap();
+
+            ClassOrInterfaceNode targetNode = mindMap.get(request.getNodeKey());
+            if (targetNode == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            List<ClassOrInterfaceNode> parentInterfaces = new ArrayList<>();
+            collectParentInterfaces(targetNode, parentInterfaces, mindMap);
+
+            return new ResponseEntity<>(parentInterfaces, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/repo/getParentClass")
+    public ResponseEntity<ClassOrInterfaceNode> getParentClass(@RequestBody Map<String, String> requestBody) {
+        try {
+            String repoUrl = requestBody.get("repoUrl");
+            String nodeKey = requestBody.get("nodeKey");
+
+            Map<String, ClassOrInterfaceNode> mindMap = repoCache.getRepoData(repoUrl)
+                    .orElseThrow(() -> new NoSuchElementException("Repository data not found"))
+                    .getMindMap();
+
+            ClassOrInterfaceNode currentNode = mindMap.get(nodeKey);
+            if (currentNode == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            List<ClassOrInterfaceNode> parentClassNodes = currentNode.getExtendsNode();
+            if (parentClassNodes != null && !parentClassNodes.isEmpty()) {
+                return new ResponseEntity<>(parentClassNodes.get(0), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void collectParentInterfaces(ClassOrInterfaceNode node, List<ClassOrInterfaceNode> parentInterfaces, Map<String, ClassOrInterfaceNode> mindMap) {
+        if (node.getImplementsNode() != null) {
+            for (ClassOrInterfaceNode parent : node.getImplementsNode()) {
+                parentInterfaces.add(parent);
+                ClassOrInterfaceNode parentNode = mindMap.get(parent.getNodeKey());
+                if (parentNode != null) {
+                    collectParentInterfaces(parentNode, parentInterfaces, mindMap);
+                }
+            }
+        }
+    }
+
+    @PostMapping("/repo/findLinkMethods")
+    public ResponseEntity<List<String>> findLinkMethods(@RequestBody RepoNodeRequest request) {
+        try {
+            ClassOrInterfaceNode node = repoCache.getRepoData(request.getRepoUrl())
+                    .orElseThrow(() -> new NoSuchElementException("Repository data not found"))
+                    .getMindMap()
+                    .get(request.getNodeKey());
+
+            if (node == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            List<String> methodLinks = findMethodLinks(node, request.getMethodName());
+
+            return new ResponseEntity<>(methodLinks, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    private List<String> findMethodLinks(ClassOrInterfaceNode node, String methodName) {
+        List<String> links = new ArrayList<>();
+
+        if (node.getMethodList() != null) {
+            for (MethodNode method : node.getMethodList()) {
+                if (method.getName().equals(methodName)) {
+                    String methodBody = method.getBody();
+                    if (methodBody != null) {
+                        // Regex to capture method call pattern in the body
+                        String regex = "\\b" + methodName + "\\s*\\(";
+                        Pattern pattern = Pattern.compile(regex);
+                        Matcher matcher = pattern.matcher(methodBody);
+                        while (matcher.find()) {
+                            String foundMethod = matcher.group();
+                            links.add("Method " + methodName + " links to " + foundMethod);
+                        }
+                    }
+                }
+            }
+        }
+
+        return links;
+    }
 }

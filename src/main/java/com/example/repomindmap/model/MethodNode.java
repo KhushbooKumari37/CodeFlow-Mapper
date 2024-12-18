@@ -29,4 +29,6 @@ public class MethodNode {
   private String signature;
   private String body;
   private List<String> annotations;
+
+  private String nodeKey;
 }

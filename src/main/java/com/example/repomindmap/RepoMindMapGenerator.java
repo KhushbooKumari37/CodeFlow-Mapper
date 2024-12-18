@@ -111,4 +111,19 @@ public class RepoMindMapGenerator {
             methods.add(methodNode);
         });
     }
+    private static void processImplementedInterfaces(ClassOrInterfaceDeclaration unit, List<ClassOrInterfaceNode> interfaces, String packageName) {
+        unit.getImplementedTypes().forEach(parent -> {
+            ClassOrInterfaceNode interfaceNode = new ClassOrInterfaceNode();
+            interfaceNode.setName(parent.getNameAsString());
+            interfaceNode.setPackageName(packageName);
+            interfaces.add(interfaceNode);
+            if (parent.isClassOrInterfaceType()) {
+                parent.asClassOrInterfaceType().getTypeArguments().ifPresent(typeArgs -> {
+                    typeArgs.forEach(typeArg -> {
+                        processImplementedInterfaces(unit, interfaces, packageName);
+                    });
+                });
+            }
+        });
+    }
 }
