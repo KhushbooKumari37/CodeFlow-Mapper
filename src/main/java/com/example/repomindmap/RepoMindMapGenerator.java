@@ -4,15 +4,10 @@ import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.model.MethodNode;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.stmt.BlockStmt;
-import org.springframework.util.CollectionUtils;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 

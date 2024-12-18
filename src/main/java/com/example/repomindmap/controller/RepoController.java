@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api")
@@ -36,18 +38,19 @@ public class RepoController {
             return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     @PostMapping("/repo/addOrUpdate")
     public ResponseEntity<String> addOrUpdateRepoData(@RequestBody Map<String, String> request) {
         return repoCache.addOrUpdateRepoData(request);
     }
 
-    @GetMapping("/repo/{repoUrl}")
-    public ResponseEntity<Map<String, ClassOrInterfaceNode>> getRepoData(@PathVariable String repoUrl) {
+    @PostMapping("/repo/generateMap")
+    public ResponseEntity<Map<String, ClassOrInterfaceNode>> getRepoData(@RequestBody String repoUrl) {
         try {
             String decodedRepoUrl = java.net.URLDecoder.decode(repoUrl, StandardCharsets.UTF_8.name());
             return repoCache.getRepoData(decodedRepoUrl)
                     .map(repoData -> new ResponseEntity<>(repoData.getMindMap(), HttpStatus.OK))
-                    .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+                    .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -67,9 +70,20 @@ public class RepoController {
         int cacheSize = repoCache.getCacheSize();
         return new ResponseEntity<>("Cache size: " + cacheSize, HttpStatus.OK);
     }
+
     @PostMapping("/repo/clearCache")
     public ResponseEntity<String> clearCache() {
         repoCache.clearCache();
         return new ResponseEntity<>("Cache cleared.", HttpStatus.OK);
+    }
+
+    @PostMapping("/repo/getAll")
+    public ResponseEntity<Set<String>> getAllNodeKeys(@RequestBody String repoUrl) {
+        return new ResponseEntity<>(repoCache.getRepoData(repoUrl).get().getMindMap().keySet(), HttpStatus.OK);
+    }
+
+    @PostMapping("/repo/getNodeInfo")
+    public ResponseEntity<ClassOrInterfaceNode> getNodeInfo(@RequestBody String repoUrl, @RequestBody String nodeKey) {
+        return new ResponseEntity<>(repoCache.getRepoData(repoUrl).get().getMindMap().get(nodeKey), HttpStatus.OK);
     }
 }
