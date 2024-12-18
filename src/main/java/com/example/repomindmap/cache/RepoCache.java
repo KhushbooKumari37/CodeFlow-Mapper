@@ -1,97 +1,92 @@
 package com.example.repomindmap.cache;
 
-import com.example.repomindmap.RepoMindMapGenerator;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
-import com.example.repomindmap.service.RepoService;
 import com.example.repomindmap.util.GitCloneUtil;
+import com.example.repomindmap.RepoMindMapGenerator;
+import com.example.repomindmap.service.RepoService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 @Component
 public class RepoCache {
 
-    private static final ConcurrentMap<String, RepoData> cache = new ConcurrentHashMap<>();
+    private static final Map<String, RepoData> cache = new HashMap<>();
     private static final Logger logger = Logger.getLogger(RepoCache.class.getName());
 
     private final RepoService repoService;
-    @Autowired
-    private GitCloneUtil gitCloneUtil;
+    private final GitCloneUtil gitCloneUtil;
+    private static final long TTL = 3600000;
 
-    public RepoCache(RepoService repoService) {
+    @Autowired
+    public RepoCache(RepoService repoService, GitCloneUtil gitCloneUtil) {
         this.repoService = repoService;
+        this.gitCloneUtil = gitCloneUtil;
     }
 
     public Map<String, ClassOrInterfaceNode> generateMindMap(String repoUrl) {
         File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
         return RepoMindMapGenerator.generateMindMap(clonedRepo);
     }
+    public synchronized Optional<RepoData> getRepoData(String repoUrl) {
+        RepoData data = cache.get(repoUrl);
 
-    public ResponseEntity<String> addOrUpdateRepoData(Map<String, String> request) {
-        String repoUrl = request.get("repoUrl");
-
-        if (repoUrl == null || repoUrl.isEmpty()) {
-            return new ResponseEntity<>("Repository URL cannot be null or empty", HttpStatus.BAD_REQUEST);
-        }
-
-        try {
+        if (data == null || isExpired(data)) {
+            logger.warning("Cache miss or expired for repository: " + repoUrl);
             Map<String, ClassOrInterfaceNode> mindMap = generateMindMap(repoUrl);
-            RepoData repoData = new RepoData(mindMap);
-            cache.put(repoUrl, repoData);
-
-            return new ResponseEntity<>("Repository data added or updated successfully!", HttpStatus.OK);
-        } catch (Exception e) {
-            logger.severe("Error generating mind map: " + e.getMessage());
-            return new ResponseEntity<>("Error generating mind map: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public static Optional<RepoData> getRepoData(String repoName) {
-        RepoData data = cache.get(repoName);
-        if (data == null) {
-            logger.warning("Cache miss for repository: " + repoName);
+            data = new RepoData(mindMap);
+            cache.put(repoUrl, data);
         }
         return Optional.ofNullable(data);
     }
 
-    public static boolean containsRepoData(String repoName) {
-        return cache.containsKey(repoName);
+    public synchronized boolean containsRepoData(String repoName) {
+        RepoData data = cache.get(repoName);
+        return data != null && !isExpired(data);
     }
 
-    public static void clearCache() {
+    public synchronized void clearCache() {
         logger.info("Clearing the entire cache");
         cache.clear();
     }
 
-    public static int getCacheSize() {
+    public synchronized int getCacheSize() {
         return cache.size();
+    }
+
+    private static boolean isExpired(RepoData data) {
+        long currentTime = System.currentTimeMillis();
+        return (currentTime - data.getLastAccessedTime()) > TTL;
     }
 
     public static class RepoData {
         private final Map<String, ClassOrInterfaceNode> mindMap;
+        private final long lastAccessedTime;
 
         public RepoData(Map<String, ClassOrInterfaceNode> mindMap) {
-            // Use the input map to create an unmodifiable version
-            this.mindMap = Collections.unmodifiableMap(new HashMap<>(mindMap));
+            this.mindMap = new HashMap<>(mindMap);
+            this.lastAccessedTime = System.currentTimeMillis();
         }
 
         public Map<String, ClassOrInterfaceNode> getMindMap() {
             return mindMap;
         }
 
+        public long getLastAccessedTime() {
+            return lastAccessedTime;
+        }
+
         @Override
         public String toString() {
             return "RepoData{" +
                     "mindMap=" + mindMap +
+                    ", lastAccessedTime=" + lastAccessedTime +
                     '}';
         }
     }
-
 }

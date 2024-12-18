@@ -1,6 +1,7 @@
 package com.example.repomindmap.controller;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.cache.RepoCache;
+import com.example.repomindmap.request.RepoNodeRequest;
 import com.example.repomindmap.service.RepoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 @RestController
@@ -39,14 +41,11 @@ public class RepoController {
         }
     }
 
-    @PostMapping("/repo/addOrUpdate")
-    public ResponseEntity<String> addOrUpdateRepoData(@RequestBody Map<String, String> request) {
-        return repoCache.addOrUpdateRepoData(request);
-    }
 
     @PostMapping("/repo/generateMap")
-    public ResponseEntity<Map<String, ClassOrInterfaceNode>> getRepoData(@RequestBody String repoUrl) {
+    public ResponseEntity<Map<String, ClassOrInterfaceNode>> getRepoData(@RequestBody Map<String, String> request) {
         try {
+            String repoUrl = request.get("repoUrl");
             String decodedRepoUrl = java.net.URLDecoder.decode(repoUrl, StandardCharsets.UTF_8.name());
             return repoCache.getRepoData(decodedRepoUrl)
                     .map(repoData -> new ResponseEntity<>(repoData.getMindMap(), HttpStatus.OK))
@@ -83,7 +82,17 @@ public class RepoController {
     }
 
     @PostMapping("/repo/getNodeInfo")
-    public ResponseEntity<ClassOrInterfaceNode> getNodeInfo(@RequestBody String repoUrl, @RequestBody String nodeKey) {
-        return new ResponseEntity<>(repoCache.getRepoData(repoUrl).get().getMindMap().get(nodeKey), HttpStatus.OK);
+    public ResponseEntity<ClassOrInterfaceNode> getNodeInfo(@RequestBody RepoNodeRequest request) {
+        try {
+            ClassOrInterfaceNode node = repoCache.getRepoData(request.getRepoUrl())
+                    .orElseThrow(() -> new NoSuchElementException("Repository data not found"))
+                    .getMindMap()
+                    .get(request.getNodeKey());
+
+            return new ResponseEntity<>(node, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
+
 }
