@@ -77,12 +77,12 @@ public class RepoController {
     }
 
     @PostMapping("/repo/getAll")
-    public ResponseEntity<Set<String>> getAllNodeKeys(@RequestBody String repoUrl) {
-        return new ResponseEntity<>(repoCache.getRepoData(repoUrl).get().getMindMap().keySet(), HttpStatus.OK);
+    public ResponseEntity<Set<String>> getAllNodeKeys (@RequestBody Map<String, String> request) {
+        return new ResponseEntity<>(repoCache.getRepoData(request.get("repoUrl")).get().getMindMap().keySet(), HttpStatus.OK);
     }
 
     @PostMapping("/repo/getNodeInfo")
-    public ResponseEntity<ClassOrInterfaceNode> getNodeInfo(@RequestBody RepoNodeRequest request) {
+    public ResponseEntity<ClassOrInterfaceNode> getNodeInfo (@RequestBody RepoNodeRequest request) {
         try {
             ClassOrInterfaceNode node = repoCache.getRepoData(request.getRepoUrl())
                     .orElseThrow(() -> new NoSuchElementException("Repository data not found"))
