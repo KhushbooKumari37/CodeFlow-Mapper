@@ -166,22 +166,24 @@ public class RepoMindMapGenerator {
 
               String name = methodDeclaration.getNameAsString();
               List<MethodNode> methodNodes = new ArrayList<>();
-              String mainClassName = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+name).get();
-              methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
-                  String methodName = m.getNameAsString();
+              Optional<String> mainClassName = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+name);
+              if(mainClassName.isPresent()) {
+                  methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
+                      String methodName = m.getNameAsString();
 
-                  Optional<String> className = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+methodName);
-                  if(className.isPresent()) {
-                      System.out.print(name+" method - "+ methodName);
-                      System.out.println(" "+className.get() + " - ");
-                      String methodNodeKey = name + "#" + packageName + "." + className.get() + "#" + m.getArguments().size();
-                      Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl,methodNodeKey);
-                      methodNode.ifPresent(methodNodes::add);
+                      Optional<String> className = relatedNodeCache.getMethodsForClass(repoUrl, packageName + "#" + methodName);
+                      if (className.isPresent()) {
+                          System.out.print(name + " method - " + methodName);
+                          System.out.println(" " + className.get() + " - ");
+                          String methodNodeKey = name + "#" + packageName + "." + className.get() + "#" + m.getArguments().size();
+                          Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl, methodNodeKey);
+                          methodNode.ifPresent(methodNodes::add);
+                      }
+                  });
+                  String methodNodeKey = name + "#" + packageName + "." + mainClassName.get() + "#" + methodDeclaration.getParameters().size();
+                  if (!methodNodes.isEmpty()) {
+                      relatedNodeCache.put2(repoUrl, methodNodeKey, methodNodes);
                   }
-              });
-              String methodNodeKey = name + "#" + packageName + "." + mainClassName + "#" + methodDeclaration.getParameters().size();
-              if (!methodNodes.isEmpty()) {
-                  relatedNodeCache.put2(repoUrl,methodNodeKey, methodNodes);
               }
           });
       } catch (Exception e) {
