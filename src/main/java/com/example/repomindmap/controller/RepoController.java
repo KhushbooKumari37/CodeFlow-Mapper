@@ -4,7 +4,6 @@ import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.cache.RepoCache;
 import com.example.repomindmap.model.MethodNode;
 import com.example.repomindmap.request.RepoNodeRequest;
-import com.example.repomindmap.service.RepoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,25 +11,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(value = "*")
 public class RepoController {
-
-    @Autowired
-    private RepoService repoService;
     @Autowired
     private RepoCache repoCache;
     @Autowired

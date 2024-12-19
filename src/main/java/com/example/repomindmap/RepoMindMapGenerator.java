@@ -3,11 +3,11 @@ package com.example.repomindmap;
 import com.example.repomindmap.cache.RelatedNodeCache;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.model.MethodNode;
-import com.example.repomindmap.service.RepoService;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -34,9 +34,6 @@ import java.util.stream.Collectors;
 public class RepoMindMapGenerator {
 
     private static final String DOT = ".";
-
-    @Autowired
-    public RepoService repoService;
     @Autowired
     public RelatedNodeCache relatedNodeCache;
 
@@ -93,6 +90,13 @@ public class RepoMindMapGenerator {
         unit.getExtendedTypes().stream().findFirst().ifPresent(extendedNode -> {
             ClassOrInterfaceNode extendNode = getRelatedNodes(extendedNode);
             //TODO: Recurrion approach for parent data
+            if (unit.isInterface()) {
+                extendNode.setParentType("INTERFACE");
+            } else if (extendedNode.getParentNode().isPresent() && extendedNode.getParentNode().get() instanceof EnumDeclaration) {
+                extendNode.setParentType("ENUM");
+            } else {
+                extendNode.setParentType("CLASS");
+            }
             extendNodes.add(extendNode);
         });
         node.setExtendsNode(extendNodes);
@@ -116,9 +120,14 @@ public class RepoMindMapGenerator {
 
     private ClassOrInterfaceNode getRelatedNodes(ClassOrInterfaceType extendedNode) {
         ClassOrInterfaceNode extendNode = new ClassOrInterfaceNode();
+        String packageName = extendedNode.getMetaModel().getPackageName();
+        if (packageName.isEmpty() || packageName.startsWith("com.github.javaparser")) {
+            extendNode.setPackageName("");
+        } else {
+            extendNode.setPackageName(packageName);
+        }
         extendNode.setName(extendedNode.getNameAsString());
-        extendNode.setPackageName(extendedNode.getMetaModel().getPackageName());
-        extendNode.setNodeKey(extendNode.getPackageName()+DOT+extendNode.getName());
+        extendNode.setNodeKey(extendNode.getPackageName() + DOT + extendNode.getName());
         return extendNode;
     }
 

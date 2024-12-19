@@ -3,7 +3,6 @@ package com.example.repomindmap.cache;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.util.GitCloneUtil;
 import com.example.repomindmap.RepoMindMapGenerator;
-import com.example.repomindmap.service.RepoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,15 +17,12 @@ public class RepoCache {
 
     private static final Map<String, RepoData> cache = new HashMap<>();
     private static final Logger logger = Logger.getLogger(RepoCache.class.getName());
-
-    private final RepoService repoService;
     private final GitCloneUtil gitCloneUtil;
     private final RepoMindMapGenerator repoMindMapGenerator;
     private static final long TTL = 3600000;
 
     @Autowired
-    public RepoCache(RepoService repoService, GitCloneUtil gitCloneUtil, RepoMindMapGenerator repoMindMapGenerator) {
-        this.repoService = repoService;
+    public RepoCache(GitCloneUtil gitCloneUtil, RepoMindMapGenerator repoMindMapGenerator) {
         this.gitCloneUtil = gitCloneUtil;
         this.repoMindMapGenerator = repoMindMapGenerator;
     }
