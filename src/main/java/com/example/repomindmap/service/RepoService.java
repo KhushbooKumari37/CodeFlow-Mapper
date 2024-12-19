@@ -37,40 +37,40 @@ public class RepoService {
     return mindMap;
   }
 
-  @Async
-  public CompletableFuture<List<MethodNode>> fetchMethodList(String repoUrl, Map<String, ClassOrInterfaceNode> mindMap) {
-    List<MethodNode> methodNodeList = new ArrayList<>();
-
-    mindMap.values().forEach(node -> {
-      String nodeKey = node.getNodeKey();
-
-      node.getMethodList().forEach(methodNode -> {
-        String[] methodNodes = methodNode.getBody().split("\n");
-
-        for (String methodBodyLine : methodNodes) {
-          // Split method body by "(" to extract method names
-          String[] methodSeperator = methodBodyLine.split("\\(");
-
-          for (String methodSep : methodSeperator) {
-            // Assuming the method name is at the start of the line before '('
-            String methodName = methodSep.trim();
-
-            // Check if the method exists in the cache
-            Optional<MethodNode> cachedMethodNode = relatedNodeCache.getMethodData(methodName, methodKey -> {
-              return null;
-            });
-
-            cachedMethodNode.ifPresent(method -> {
-              method.setNodeKey(nodeKey);
-              methodNodeList.add(method);
-            });
-          }
-        }
-      });
-    });
-
-    return CompletableFuture.completedFuture(methodNodeList);
-  }
+//  @Async
+//  public CompletableFuture<List<MethodNode>> fetchMethodList(String repoUrl, Map<String, ClassOrInterfaceNode> mindMap) {
+//    List<MethodNode> methodNodeList = new ArrayList<>();
+//
+//    mindMap.values().forEach(node -> {
+//      String nodeKey = node.getNodeKey();
+//
+//      node.getMethodList().forEach(methodNode -> {
+//        String[] methodNodes = methodNode.getBody().split("\n");
+//
+//        for (String methodBodyLine : methodNodes) {
+//          // Split method body by "(" to extract method names
+//          String[] methodSeperator = methodBodyLine.split("\\(");
+//
+//          for (String methodSep : methodSeperator) {
+//            // Assuming the method name is at the start of the line before '('
+//            String methodName = methodSep.trim();
+//
+//            // Check if the method exists in the cache
+//            Optional<MethodNode> cachedMethodNode = relatedNodeCache.getMethodData(methodName, methodKey -> {
+//              return null;
+//            });
+//
+//            cachedMethodNode.ifPresent(method -> {
+//              method.setNodeKey(nodeKey);
+//              methodNodeList.add(method);
+//            });
+//          }
+//        }
+//      });
+//    });
+//
+//    return CompletableFuture.completedFuture(methodNodeList);
+//  }
 
   @Async
   public void fetchMethodList(CompilationUnit cu) {
@@ -84,7 +84,16 @@ public class RepoService {
         MethodNode methodNode=relatedNodeCache.getMethodData(name+"#"+packageName+"."+className+"#"+m.getArguments().size()).get();
         methodNodes.add(methodNode);
       });
-      cache2.put(name, methodNodes);
+      if (!methodNodes.isEmpty()) {
+        relatedNodeCache.put(name, methodNodes);
+      }
     });
+  }
+
+  public List<MethodNode> getMethodsFromCache(String methodKey) {
+    Optional<List<MethodNode>> cachedMethodNodes = relatedNodeCache.getFetchMethodList(methodKey);
+
+    // If data exists in cache, return it; otherwise, return an empty list.
+    return cachedMethodNodes.orElse(new ArrayList<>());
   }
 }

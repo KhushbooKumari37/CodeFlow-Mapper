@@ -53,10 +53,7 @@ public class RepoController {
     }
     @PostMapping("/getMethodNode")
     public ResponseEntity<MethodNode> getMethodNode(@RequestParam String methodKey) {
-        RelatedNodeCache.MethodGenerator generator = key -> new MethodNode(key, "Generated MethodNode for " + key);
-
-        Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(methodKey, generator);
-
+        Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(methodKey);
         return methodNode
                 .map(node -> new ResponseEntity<>(node, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
@@ -199,21 +196,21 @@ public class RepoController {
     public ResponseEntity<List<MethodNode>> fetchMethodList(@RequestBody Map<String, String> request) {
         String repoUrl = request.get("repoUrl");
 
+        // Input validation
         if (repoUrl == null || repoUrl.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
+
+        // Get repository data from cache
         Optional<RepoCache.RepoData> repoDataOptional = repoCache.getRepoData(repoUrl);
         if (repoDataOptional.isPresent()) {
             Map<String, ClassOrInterfaceNode> mindMap = repoDataOptional.get().getMindMap();
 
+            // Asynchronously fetch method list
             CompletableFuture<List<MethodNode>> methodListFuture = repoService.fetchMethodList(repoUrl, mindMap);
-            try {
-                List<MethodNode> methodList = methodListFuture.get();
-                return new ResponseEntity<>(methodList, HttpStatus.OK);
-            } catch (InterruptedException | ExecutionException e) {
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-            }
 
+            // Return CompletableFuture as response (Spring handles async response)
+            return new ResponseEntity<>(methodListFuture.join(), HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
