@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class RepoMindMapGenerator {
 
     private static final String DOT = ".";
+    private static final String PATH_NAME = "repos/";
     @Autowired
     public RelatedNodeCache relatedNodeCache;
 
@@ -92,7 +93,7 @@ public class RepoMindMapGenerator {
             //TODO: Recurrion approach for parent data
             if (unit.isInterface()) {
                 extendNode.setParentType("INTERFACE");
-            } else if (extendedNode.getParentNode().isPresent() && extendedNode.getParentNode().get() instanceof EnumDeclaration) {
+            } else if (extendedNode.getParentNode().get() instanceof EnumDeclaration) {
                 extendNode.setParentType("ENUM");
             } else {
                 extendNode.setParentType("CLASS");
@@ -120,14 +121,9 @@ public class RepoMindMapGenerator {
 
     private ClassOrInterfaceNode getRelatedNodes(ClassOrInterfaceType extendedNode) {
         ClassOrInterfaceNode extendNode = new ClassOrInterfaceNode();
-        String packageName = extendedNode.getMetaModel().getPackageName();
-        if (packageName.isEmpty() || packageName.startsWith("com.github.javaparser")) {
-            extendNode.setPackageName("");
-        } else {
-            extendNode.setPackageName(packageName);
-        }
         extendNode.setName(extendedNode.getNameAsString());
-        extendNode.setNodeKey(extendNode.getPackageName() + DOT + extendNode.getName());
+        extendNode.setPackageName(extendedNode.getMetaModel().getPackageName());
+        extendNode.setNodeKey(extendNode.getPackageName()+DOT+extendNode.getName());
         return extendNode;
     }
 
@@ -168,7 +164,10 @@ public class RepoMindMapGenerator {
         JavaParser javaParser = new JavaParser();
         CompilationUnit cu = null;
       try {
-          TypeSolver typeSolver = new CombinedTypeSolver(new ReflectionTypeSolver(),new JavaParserTypeSolver(new File("/Users/monicas/Desktop/CodeFlow-Mapper/repos/spring-boot-application-example.git")));
+          String[] urlSep = repoUrl.split("/");
+          String repoName = urlSep[urlSep.length-1];
+          File localRepo = new File(PATH_NAME + repoName);
+          TypeSolver typeSolver = new CombinedTypeSolver(new ReflectionTypeSolver(),new JavaParserTypeSolver((localRepo)));
 
           JavaSymbolSolver symbolSolver = new JavaSymbolSolver(typeSolver);
           javaParser.getParserConfiguration().setSymbolResolver(symbolSolver);

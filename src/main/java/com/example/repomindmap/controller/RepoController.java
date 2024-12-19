@@ -1,16 +1,24 @@
 package com.example.repomindmap.controller;
+
 import com.example.repomindmap.cache.RelatedNodeCache;
-import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.cache.RepoCache;
+import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.model.MethodNode;
 import com.example.repomindmap.request.RepoNodeRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -38,7 +46,7 @@ public class RepoController {
         Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl, methodKey);
         return methodNode
                 .map(node -> new ResponseEntity<>(node, HttpStatus.OK))
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+                .orElse(new ResponseEntity<>(null,HttpStatus.OK));
     }
 
 
@@ -49,7 +57,7 @@ public class RepoController {
             String decodedRepoUrl = java.net.URLDecoder.decode(repoUrl, StandardCharsets.UTF_8.name());
             return repoCache.getRepoData(decodedRepoUrl)
                     .map(repoData -> new ResponseEntity<>(repoData.getMindMap(), HttpStatus.OK))
-                    .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+                    .orElseGet(() -> new ResponseEntity<>(HttpStatus.OK));
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -61,7 +69,7 @@ public class RepoController {
         boolean exists = repoCache.containsRepoData(repoName);
         return exists
                 ? new ResponseEntity<>("Repository data exists.", HttpStatus.OK)
-                : new ResponseEntity<>("Repository data does not exist.", HttpStatus.NOT_FOUND);
+                : new ResponseEntity<>("Repository data does not exist.", HttpStatus.OK);
     }
 
     @GetMapping("/repo/cacheSize")
@@ -92,7 +100,7 @@ public class RepoController {
                     ));
             return new ResponseEntity<>(groupedByPackage, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(new HashMap<>(), HttpStatus.OK);
         }
     }
 
@@ -120,7 +128,7 @@ public class RepoController {
 
             ClassOrInterfaceNode targetNode = mindMap.get(request.getNodeKey());
             if (targetNode == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(null,HttpStatus.OK);
             }
 
             List<ClassOrInterfaceNode> parentInterfaces = new ArrayList<>();
@@ -153,7 +161,7 @@ public class RepoController {
             if (parentClassNodes != null && !parentClassNodes.isEmpty()) {
                 return new ResponseEntity<>(parentClassNodes.get(0), HttpStatus.OK);
             } else {
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+                return new ResponseEntity<>(null, HttpStatus.OK);
             }
         } catch (NoSuchElementException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -185,7 +193,7 @@ public class RepoController {
         if (methodNodes.isPresent()) {
             return new ResponseEntity<>(methodNodes.get(), HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(new ArrayList<>(),HttpStatus.OK);
         }
     }
 
