@@ -24,7 +24,7 @@ public class RepoMindMapGenerator {
             for (File file : files) {
                 if (file.isDirectory()) {
                     Map<String, ClassOrInterfaceNode> subMap = generateMindMap(file);
-                    subMap.forEach((key, value) -> mindMap.put(key, value));
+                    mindMap.putAll(subMap);
                 } else if (file.getName().endsWith(".java")) {
                     parseJavaFile(file, mindMap);
                 }
@@ -65,10 +65,9 @@ public class RepoMindMapGenerator {
         });
         node.setImplementsNode(implementNodes);
         // Find methods
-        List<MethodNode> methods = new ArrayList<>();
-        methodExtractor(unit, methods);
-        node.setMethodList(methods);
-        //TODO: Figure out on memebers & methods
+        Map<String, MethodNode> methods = new HashMap<>();
+        methodExtractor(unit, methods, node.getNodeKey());
+        node.setMethodList(methods.values().stream().toList());
         node.setModifiers(unit.getModifiers().stream().map(modifier -> modifier.getKeyword().asString()).collect(Collectors.toList()));
         node.setAnnotations(unit.getAnnotations().stream().map(annotationExpr -> annotationExpr.getName().asString()).collect(Collectors.toList()));
         return node;
@@ -82,7 +81,7 @@ public class RepoMindMapGenerator {
         return extendNode;
     }
 
-    private static void methodExtractor(ClassOrInterfaceDeclaration unit, List<MethodNode> methods) {
+    private static void methodExtractor(ClassOrInterfaceDeclaration unit, Map<String, MethodNode> methods, String nodeKey) {
         unit.getMethods().forEach(method -> {
             MethodNode methodNode = MethodNode.builder()
                     .name(method.getNameAsString())  // Set the method name
@@ -106,9 +105,11 @@ public class RepoMindMapGenerator {
                     .signature(method.getDeclarationAsString())  // Get the method signature (name + parameters + return type)
                     .annotations(method.getAnnotations().stream().map(annotationExpr -> annotationExpr.getName().asString()).collect(Collectors.toList()))
                     .body(method.getBody().map(BlockStmt::toString).orElse(""))
+                    .nodeKey(nodeKey)
                     .build();
             System.out.println(methodNode);
-            methods.add(methodNode);
+            String methodKey = methodNode.getName() + "#" + methodNode.getNodeKey() + "#" + methodNode.getParameterTypes().size();
+            methods.put(methodKey, methodNode);
         });
     }
 }
