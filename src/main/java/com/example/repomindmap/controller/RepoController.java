@@ -1,4 +1,5 @@
 package com.example.repomindmap.controller;
+import com.example.repomindmap.cache.RelatedNodeCache;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.cache.RepoCache;
 import com.example.repomindmap.model.MethodNode;
@@ -17,6 +18,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,6 +33,8 @@ public class RepoController {
     private RepoService repoService;
     @Autowired
     private RepoCache repoCache;
+    @Autowired
+    private RelatedNodeCache relatedNodeCache;
 
     @PostMapping("/generate-mindmap")
     public ResponseEntity<Map<String, ClassOrInterfaceNode>> generateMindMap(@RequestBody Map<String, String> request) {
@@ -46,6 +51,17 @@ public class RepoController {
             return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @PostMapping("/getMethodNode")
+    public ResponseEntity<MethodNode> getMethodNode(@RequestParam String methodKey) {
+        RelatedNodeCache.MethodGenerator generator = key -> new MethodNode(key, "Generated MethodNode for " + key);
+
+        Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(methodKey, generator);
+
+        return methodNode
+                .map(node -> new ResponseEntity<>(node, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
 
 
     @PostMapping("/repo/generateMap")
@@ -180,5 +196,27 @@ public class RepoController {
             }
         }
     }
+    @PostMapping("/repo/fetch-methods")
+    public ResponseEntity<List<MethodNode>> fetchMethodList(@RequestBody Map<String, String> request) {
+        String repoUrl = request.get("repoUrl");
 
+        if (repoUrl == null || repoUrl.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        Optional<RepoCache.RepoData> repoDataOptional = repoCache.getRepoData(repoUrl);
+        if (repoDataOptional.isPresent()) {
+            Map<String, ClassOrInterfaceNode> mindMap = repoDataOptional.get().getMindMap();
+
+            CompletableFuture<List<MethodNode>> methodListFuture = repoService.fetchMethodList(repoUrl, mindMap);
+            try {
+                List<MethodNode> methodList = methodListFuture.get();
+                return new ResponseEntity<>(methodList, HttpStatus.OK);
+            } catch (InterruptedException | ExecutionException e) {
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 }

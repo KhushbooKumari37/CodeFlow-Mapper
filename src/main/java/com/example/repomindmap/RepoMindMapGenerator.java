@@ -85,11 +85,11 @@ public class RepoMindMapGenerator {
     private static void methodExtractor(ClassOrInterfaceDeclaration unit, Map<String, MethodNode> methods, String packageName, String className) {
         unit.getMethods().forEach(method -> {
             MethodNode methodNode = MethodNode.builder()
-                    .name(method.getNameAsString())  // Set the method name
-                    .returnType(method.getType().asString())  // Set the return type
+                    .name(method.getNameAsString())
+                    .returnType(method.getType().asString())
                     .parameterTypes(method.getParameters().stream()
-                            .map(parameter -> parameter.getType().asString()) // Get the type of each parameter
-                            .collect(Collectors.toList()))  // Collect them into a list
+                            .map(parameter -> parameter.getType().asString())
+                            .collect(Collectors.toList()))
                     .exceptionTypes(method.getThrownExceptions().stream()
                             .map(exception -> {
                                 try {

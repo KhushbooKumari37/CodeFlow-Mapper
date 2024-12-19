@@ -32,4 +32,9 @@ public class MethodNode {
   private String className;
   private String packageName;
   private String nodeKey;
+  public MethodNode(String nodeKey, String name) {
+    this.nodeKey = nodeKey;
+    this.name = name;
+  }
+
 }
