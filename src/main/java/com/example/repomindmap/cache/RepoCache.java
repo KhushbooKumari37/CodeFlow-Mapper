@@ -21,17 +21,21 @@ public class RepoCache {
 
     private final RepoService repoService;
     private final GitCloneUtil gitCloneUtil;
+    private final RepoMindMapGenerator repoMindMapGenerator;
     private static final long TTL = 3600000;
 
     @Autowired
-    public RepoCache(RepoService repoService, GitCloneUtil gitCloneUtil) {
+    public RepoCache(RepoService repoService, GitCloneUtil gitCloneUtil, RepoMindMapGenerator repoMindMapGenerator) {
         this.repoService = repoService;
         this.gitCloneUtil = gitCloneUtil;
+        this.repoMindMapGenerator = repoMindMapGenerator;
     }
 
     public Map<String, ClassOrInterfaceNode> generateMindMap(String repoUrl) {
         File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
-        return RepoMindMapGenerator.generateMindMap(clonedRepo);
+        Map<String, ClassOrInterfaceNode> mindMap = repoMindMapGenerator.generateMindMap(clonedRepo);
+        repoMindMapGenerator.getFetchMethod(clonedRepo);
+        return mindMap;
     }
     public synchronized Optional<RepoData> getRepoData(String repoUrl) {
         RepoData data = cache.get(repoUrl);

@@ -36,21 +36,21 @@ public class RepoController {
     @Autowired
     private RelatedNodeCache relatedNodeCache;
 
-    @PostMapping("/generate-mindmap")
-    public ResponseEntity<Map<String, ClassOrInterfaceNode>> generateMindMap(@RequestBody Map<String, String> request) {
-        String repoUrl = request.get("repoUrl");
-
-        if (repoUrl == null || repoUrl.isEmpty()) {
-            return new ResponseEntity<>(new HashMap<>(), HttpStatus.BAD_REQUEST);
-        }
-
-        try {
-            Map<String, ClassOrInterfaceNode> mindMapJson = repoService.generateMindMap(repoUrl);
-            return new ResponseEntity<>(mindMapJson, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
+//    @PostMapping("/generate-mindmap")
+//    public ResponseEntity<Map<String, ClassOrInterfaceNode>> generateMindMap(@RequestBody Map<String, String> request) {
+//        String repoUrl = request.get("repoUrl");
+//
+//        if (repoUrl == null || repoUrl.isEmpty()) {
+//            return new ResponseEntity<>(new HashMap<>(), HttpStatus.BAD_REQUEST);
+//        }
+//
+//        try {
+//            Map<String, ClassOrInterfaceNode> mindMapJson = repoService.generateMindMap(repoUrl);
+//            return new ResponseEntity<>(mindMapJson, HttpStatus.OK);
+//        } catch (Exception e) {
+//            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+//    }
     @PostMapping("/getMethodNode")
     public ResponseEntity<MethodNode> getMethodNode(@RequestParam String methodKey) {
         Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(methodKey);
@@ -194,25 +194,12 @@ public class RepoController {
     }
     @PostMapping("/repo/fetch-methods")
     public ResponseEntity<List<MethodNode>> fetchMethodList(@RequestBody Map<String, String> request) {
-        String repoUrl = request.get("repoUrl");
-
-        // Input validation
-        if (repoUrl == null || repoUrl.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-        }
-
-        // Get repository data from cache
-        Optional<RepoCache.RepoData> repoDataOptional = repoCache.getRepoData(repoUrl);
-        if (repoDataOptional.isPresent()) {
-            Map<String, ClassOrInterfaceNode> mindMap = repoDataOptional.get().getMindMap();
-
-            // Asynchronously fetch method list
-            CompletableFuture<List<MethodNode>> methodListFuture = repoService.fetchMethodList(repoUrl, mindMap);
-
-            // Return CompletableFuture as response (Spring handles async response)
-            return new ResponseEntity<>(methodListFuture.join(), HttpStatus.OK);
+        String methodNodeKey = request.get("methodNodeKey");
+        Optional<List<MethodNode>> methodNodes = relatedNodeCache.getFetchMethodList(methodNodeKey);
+        if(methodNodes.isPresent()) {
+            return new ResponseEntity<>(methodNodes.get(), HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
     }
 }

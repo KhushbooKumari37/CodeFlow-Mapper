@@ -16,31 +16,8 @@ import java.util.Map;
 import static java.lang.reflect.Modifier.TRANSIENT;
 
 @SpringBootApplication
-public class RepoMindMapGeneratorApplication implements CommandLineRunner {
-
-    @Autowired
-    private GitCloneUtil gitCloneUtil;
-
+public class RepoMindMapGeneratorApplication {
     public static void main(String[] args) {
         SpringApplication.run(RepoMindMapGeneratorApplication.class, args);
-    }
-
-    @Override
-    public void run(String... args) {
-        String repoUrl = "https://github.com/alexmanrique/spring-boot-application-example";
-
-        try {
-            String mindMapJson = generateMindMap(repoUrl).toString();
-            System.out.println("Generated Mind Map:");
-            System.out.println(mindMapJson);
-        } catch (Exception e) {
-            System.err.println("Error generating mind map: " + e);
-        }
-    }
-
-    public Map<String,ClassOrInterfaceNode> generateMindMap(String repoUrl) {
-        File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
-        Map<String, ClassOrInterfaceNode> mindMap = RepoMindMapGenerator.generateMindMap(clonedRepo);
-        return mindMap;
     }
 }

@@ -31,11 +31,14 @@ public class RepoService {
   @Autowired
   private RelatedNodeCache relatedNodeCache;
 
-  public Map<String, ClassOrInterfaceNode> generateMindMap(String repoUrl) {
-    File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
-    Map<String, ClassOrInterfaceNode> mindMap = RepoMindMapGenerator.generateMindMap(clonedRepo);
-    return mindMap;
-  }
+//  @Autowired
+//  private RepoMindMapGenerator repoMindMapGenerator;
+
+//  public Map<String, ClassOrInterfaceNode> generateMindMap(String repoUrl) {
+//    File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
+//    Map<String, ClassOrInterfaceNode> mindMap = repoMindMapGenerator.generateMindMap(clonedRepo);
+//    return mindMap;
+//  }
 
 //  @Async
 //  public CompletableFuture<List<MethodNode>> fetchMethodList(String repoUrl, Map<String, ClassOrInterfaceNode> mindMap) {
@@ -71,25 +74,6 @@ public class RepoService {
 //
 //    return CompletableFuture.completedFuture(methodNodeList);
 //  }
-
-  @Async
-  public void fetchMethodList(CompilationUnit cu) {
-    cu.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
-
-      String name = methodDeclaration.getNameAsString();
-      List<MethodNode> methodNodes = new ArrayList<>();
-      methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
-        String className = m.getMetaModel().getQualifiedClassName();
-        String packageName = m.getMetaModel().getPackageName();
-        MethodNode methodNode=relatedNodeCache.getMethodData(name+"#"+packageName+"."+className+"#"+m.getArguments().size()).get();
-        methodNodes.add(methodNode);
-      });
-      if (!methodNodes.isEmpty()) {
-        relatedNodeCache.put(name, methodNodes);
-      }
-    });
-  }
-
   public List<MethodNode> getMethodsFromCache(String methodKey) {
     Optional<List<MethodNode>> cachedMethodNodes = relatedNodeCache.getFetchMethodList(methodKey);
 
