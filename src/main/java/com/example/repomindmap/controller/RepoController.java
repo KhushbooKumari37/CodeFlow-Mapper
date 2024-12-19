@@ -36,29 +36,20 @@ public class RepoController {
     @Autowired
     private RelatedNodeCache relatedNodeCache;
 
-//    @PostMapping("/generate-mindmap")
-//    public ResponseEntity<Map<String, ClassOrInterfaceNode>> generateMindMap(@RequestBody Map<String, String> request) {
-//        String repoUrl = request.get("repoUrl");
-//
-//        if (repoUrl == null || repoUrl.isEmpty()) {
-//            return new ResponseEntity<>(new HashMap<>(), HttpStatus.BAD_REQUEST);
-//        }
-//
-//        try {
-//            Map<String, ClassOrInterfaceNode> mindMapJson = repoService.generateMindMap(repoUrl);
-//            return new ResponseEntity<>(mindMapJson, HttpStatus.OK);
-//        } catch (Exception e) {
-//            return new ResponseEntity<>(new HashMap<>(), HttpStatus.INTERNAL_SERVER_ERROR);
-//        }
-//    }
     @PostMapping("/getMethodNode")
-    public ResponseEntity<MethodNode> getMethodNode(@RequestParam String methodKey) {
-        Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(methodKey);
+    public ResponseEntity<MethodNode> getMethodNode(@RequestBody Map<String, String> request) {
+        String repoUrl = request.get("repoUrl");
+        String methodKey = request.get("methodKey");
+
+        if (repoUrl == null || methodKey == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl, methodKey);
         return methodNode
                 .map(node -> new ResponseEntity<>(node, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
-
 
 
     @PostMapping("/repo/generateMap")
@@ -194,12 +185,18 @@ public class RepoController {
     }
     @PostMapping("/repo/fetch-methods")
     public ResponseEntity<List<MethodNode>> fetchMethodList(@RequestBody Map<String, String> request) {
+        String repoUrl = request.get("repoUrl");
         String methodNodeKey = request.get("methodNodeKey");
-        Optional<List<MethodNode>> methodNodes = relatedNodeCache.getFetchMethodList(methodNodeKey);
-        if(methodNodes.isPresent()) {
+        if (repoUrl == null || methodNodeKey == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        Optional<List<MethodNode>> methodNodes = relatedNodeCache.getFetchMethodList(repoUrl, methodNodeKey);
+        if (methodNodes.isPresent()) {
             return new ResponseEntity<>(methodNodes.get(), HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
     }
+
 }

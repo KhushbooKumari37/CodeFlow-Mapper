@@ -35,43 +35,43 @@ public class RepoMindMapGenerator {
     @Autowired
     public RelatedNodeCache relatedNodeCache;
 
-    public Map<String, ClassOrInterfaceNode> generateMindMap(File directory) {
+    public Map<String, ClassOrInterfaceNode> generateMindMap(File directory,String repoUrl) {
         Map<String, ClassOrInterfaceNode> mindMap = new LinkedHashMap<>();
         File[] files = directory.listFiles();
 
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
-                    Map<String, ClassOrInterfaceNode> subMap = generateMindMap(file);
+                    Map<String, ClassOrInterfaceNode> subMap = generateMindMap(file,repoUrl);
                     mindMap.putAll(subMap);
                 } else if (file.getName().endsWith(".java")) {
-                    parseJavaFile(file, mindMap);
+                    parseJavaFile(file, mindMap,repoUrl);
                 }
             }
         }
         return mindMap;
     }
 
-    public void getFetchMethod(File directory) {
+    public void getFetchMethod(File directory,String repoUrl) {
         File[] files = directory.listFiles();
 
         if (files != null) {
             for (File file : files) {
                 if (file.isDirectory()) {
-                    getFetchMethod(file);
+                    getFetchMethod(file,repoUrl);
                 } else if (file.getName().endsWith(".java")) {
-                    fetchMethodList(file);
+                    fetchMethodList(file, repoUrl);
                 }
             }
         }
     }
 
-    private void parseJavaFile(File file, Map<String, ClassOrInterfaceNode> classInfoMap) {
+    private void parseJavaFile(File file, Map<String, ClassOrInterfaceNode> classInfoMap,String repoUrl) {
         try {
             JavaParser javaParser = new JavaParser();
             CompilationUnit cu = javaParser.parse(file).getResult().orElseThrow(() -> new RuntimeException("Failed to parse Java file"));
             cu.findAll(ClassOrInterfaceDeclaration.class).forEach(unit -> {
-                ClassOrInterfaceNode node = getClassOrInterfaceNode(unit, cu.getPackageDeclaration().orElseGet(PackageDeclaration::new));
+                ClassOrInterfaceNode node = getClassOrInterfaceNode(unit, cu.getPackageDeclaration().orElseGet(PackageDeclaration::new), repoUrl);
                 classInfoMap.put(node.getNodeKey(), node);
             });
 
@@ -80,7 +80,7 @@ public class RepoMindMapGenerator {
         }
     }
 
-    private ClassOrInterfaceNode getClassOrInterfaceNode(ClassOrInterfaceDeclaration unit, PackageDeclaration packageDeclaration) {
+    private ClassOrInterfaceNode getClassOrInterfaceNode(ClassOrInterfaceDeclaration unit, PackageDeclaration packageDeclaration,String repoUrl) {
         String packageName = packageDeclaration.getNameAsString();
         String name = unit.getNameAsString();
         ClassOrInterfaceNode node = ClassOrInterfaceNode.builder().packageName(packageName).name(name).nodeKey(packageName+ DOT +name).build();
@@ -100,9 +100,9 @@ public class RepoMindMapGenerator {
         node.setImplementsNode(implementNodes);
         // Find methods
         Map<String, MethodNode> methods = new HashMap<>();
-        methodExtractor(unit, methods, node.getPackageName(), node.getName());
+        methodExtractor(unit, methods, node.getPackageName(), node.getName(),repoUrl);
         List<String> methodNames =  methods.values().stream().map(m->m.getName()).collect(Collectors.toList());
-        methodNames.forEach(m-> relatedNodeCache.putClassCache(packageName+"#"+m, node.getName()));
+        methodNames.forEach(m-> relatedNodeCache.putClassCache(repoUrl,packageName+"#"+m, node.getName()));
         node.setMethodList(methods.values().stream().collect(Collectors.toList()));
         node.setModifiers(unit.getModifiers().stream().map(modifier -> modifier.getKeyword().asString()).collect(Collectors.toList()));
         node.setAnnotations(unit.getAnnotations().stream().map(annotationExpr -> annotationExpr.getName().asString()).collect(Collectors.toList()));
@@ -117,7 +117,7 @@ public class RepoMindMapGenerator {
         return extendNode;
     }
 
-    private void methodExtractor(ClassOrInterfaceDeclaration unit, Map<String, MethodNode> methods, String packageName, String className) {
+    private void methodExtractor(ClassOrInterfaceDeclaration unit, Map<String, MethodNode> methods, String packageName, String className,String repoUrl) {
         unit.getMethods().forEach(method -> {
             MethodNode methodNode = MethodNode.builder()
                     .name(method.getNameAsString())
@@ -147,11 +147,11 @@ public class RepoMindMapGenerator {
                     .build();
             String methodKey = methodNode.getName() + "#" + methodNode.getNodeKey() + "#" + methodNode.getParameterTypes().size();
             methods.put(methodKey, methodNode);
-            relatedNodeCache.put(methodKey, methodNode);
+            relatedNodeCache.put(repoUrl,methodKey, methodNode);
         });
     }
 
-    public void fetchMethodList(File file) {
+    public void fetchMethodList(File file,String repoUrl) {
         JavaParser javaParser = new JavaParser();
         CompilationUnit cu = null;
       try {
@@ -166,22 +166,22 @@ public class RepoMindMapGenerator {
 
               String name = methodDeclaration.getNameAsString();
               List<MethodNode> methodNodes = new ArrayList<>();
-              String mainClassName = relatedNodeCache.getMethodsForClass(packageName+"#"+name).get();
+              String mainClassName = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+name).get();
               methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
                   String methodName = m.getNameAsString();
 
-                  Optional<String> className = relatedNodeCache.getMethodsForClass(packageName+"#"+methodName);
+                  Optional<String> className = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+methodName);
                   if(className.isPresent()) {
                       System.out.print(name+" method - "+ methodName);
                       System.out.println(" "+className.get() + " - ");
                       String methodNodeKey = name + "#" + packageName + "." + className.get() + "#" + m.getArguments().size();
-                      Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(methodNodeKey);
+                      Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl,methodNodeKey);
                       methodNode.ifPresent(methodNodes::add);
                   }
               });
               String methodNodeKey = name + "#" + packageName + "." + mainClassName + "#" + methodDeclaration.getParameters().size();
               if (!methodNodes.isEmpty()) {
-                  relatedNodeCache.put2(methodNodeKey, methodNodes);
+                  relatedNodeCache.put2(repoUrl,methodNodeKey, methodNodes);
               }
           });
       } catch (Exception e) {

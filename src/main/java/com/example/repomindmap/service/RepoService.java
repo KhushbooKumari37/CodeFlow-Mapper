@@ -74,8 +74,8 @@ public class RepoService {
 //
 //    return CompletableFuture.completedFuture(methodNodeList);
 //  }
-  public List<MethodNode> getMethodsFromCache(String methodKey) {
-    Optional<List<MethodNode>> cachedMethodNodes = relatedNodeCache.getFetchMethodList(methodKey);
+  public List<MethodNode> getMethodsFromCache(String methodKey,String repoUrl) {
+    Optional<List<MethodNode>> cachedMethodNodes = relatedNodeCache.getFetchMethodList(methodKey,repoUrl);
 
     // If data exists in cache, return it; otherwise, return an empty list.
     return cachedMethodNodes.orElse(new ArrayList<>());

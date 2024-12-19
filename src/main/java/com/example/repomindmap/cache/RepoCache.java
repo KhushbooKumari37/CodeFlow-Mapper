@@ -33,8 +33,8 @@ public class RepoCache {
 
     public Map<String, ClassOrInterfaceNode> generateMindMap(String repoUrl) {
         File clonedRepo = gitCloneUtil.cloneRepository(repoUrl);
-        Map<String, ClassOrInterfaceNode> mindMap = repoMindMapGenerator.generateMindMap(clonedRepo);
-        repoMindMapGenerator.getFetchMethod(clonedRepo);
+        Map<String, ClassOrInterfaceNode> mindMap = repoMindMapGenerator.generateMindMap(clonedRepo,repoUrl);
+        repoMindMapGenerator.getFetchMethod(clonedRepo,repoUrl);
         return mindMap;
     }
     public synchronized Optional<RepoData> getRepoData(String repoUrl) {
