@@ -112,7 +112,6 @@ public class RepoController {
                                     Collectors.toList()
                             )
                     ));
-                repoService.fetchMethodList(request.get("repoUrl"), repoDataOptional.get().getMindMap());
             return new ResponseEntity<>(groupedByPackage, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

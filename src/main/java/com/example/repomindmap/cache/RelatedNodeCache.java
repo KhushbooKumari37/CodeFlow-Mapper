@@ -4,6 +4,7 @@ import com.example.repomindmap.model.MethodNode;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -12,20 +13,13 @@ import java.util.logging.Logger;
 public class RelatedNodeCache {
 
     private static final Map<String, MethodData> cache = new HashMap<>();
+    private static final Map<String, List<MethodNode>> subCache = new HashMap<>();
+
     private static final Logger logger = Logger.getLogger(RelatedNodeCache.class.getName());
     private static final long TTL = 3600000;
 
-    public synchronized Optional<MethodNode> getMethodData(String methodKey, MethodGenerator generator) {
+    public synchronized Optional<MethodNode> getMethodData(String methodKey) {
         MethodData data = cache.get(methodKey);
-        if (data == null || isExpired(data)) {
-            logger.warning("Cache miss or expired for method: " + methodKey);
-            MethodNode methodNode = generator.generate(methodKey);
-            if (methodNode != null) {
-                data = new MethodData(methodNode);
-                cache.put(methodKey, data);
-            }
-        }
-
         return Optional.ofNullable(data).map(MethodData::getMethodNode);
     }
 
@@ -57,9 +51,5 @@ public class RelatedNodeCache {
                     ", lastAccessedTime=" + lastAccessedTime +
                     '}';
         }
-    }
-    @FunctionalInterface
-    public interface MethodGenerator {
-        MethodNode generate(String methodKey);
     }
 }

@@ -5,6 +5,9 @@ import com.example.repomindmap.cache.RelatedNodeCache;
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.model.MethodNode;
 import com.example.repomindmap.util.GitCloneUtil;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,5 +70,21 @@ public class RepoService {
     });
 
     return CompletableFuture.completedFuture(methodNodeList);
+  }
+
+  @Async
+  public void fetchMethodList(CompilationUnit cu) {
+    cu.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
+
+      String name = methodDeclaration.getNameAsString();
+      List<MethodNode> methodNodes = new ArrayList<>();
+      methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
+        String className = m.getMetaModel().getQualifiedClassName();
+        String packageName = m.getMetaModel().getPackageName();
+        MethodNode methodNode=relatedNodeCache.getMethodData(name+"#"+packageName+"."+className+"#"+m.getArguments().size()).get();
+        methodNodes.add(methodNode);
+      });
+      cache2.put(name, methodNodes);
+    });
   }
 }

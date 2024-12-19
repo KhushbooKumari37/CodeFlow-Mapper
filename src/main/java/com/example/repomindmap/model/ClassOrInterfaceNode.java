@@ -27,4 +27,5 @@ public class ClassOrInterfaceNode {
   private List<MethodNode> methodList;
   private List<String> annotations;
   private List<String> modifiers;
+
 }

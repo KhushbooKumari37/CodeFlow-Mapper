@@ -2,12 +2,14 @@ package com.example.repomindmap;
 
 import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.model.MethodNode;
+import com.example.repomindmap.service.RepoService;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.File;
 import java.util.*;
@@ -16,6 +18,9 @@ import java.util.stream.Collectors;
 public class RepoMindMapGenerator {
 
     private static final String DOT = ".";
+
+    @Autowired
+    public static RepoService repoService;
 
     public static Map<String, ClassOrInterfaceNode> generateMindMap(File directory) {
         Map<String, ClassOrInterfaceNode> mindMap = new LinkedHashMap<>();
@@ -42,6 +47,7 @@ public class RepoMindMapGenerator {
                 ClassOrInterfaceNode node = getClassOrInterfaceNode(unit, cu.getPackageDeclaration().orElseGet(PackageDeclaration::new));
                 classInfoMap.put(node.getNodeKey(), node);
             });
+            repoService.fetchMethodList(cu);
         } catch (Exception e) {
             e.printStackTrace();
         }
