@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(value = "*")
 public class RepoController {
 
     @Autowired
