@@ -1,6 +1,5 @@
 package com.example.repomindmap.model;
 
-import com.github.javaparser.ast.body.Parameter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +23,7 @@ public class MethodNode {
   private String name;
   private String returnType;
   private List<String> parameterTypes;
-  private Class<?>[] exceptionTypes;
+  private List<String> exceptionTypes;
   private List<String> modifiers;
   private String signature;
   private String body;

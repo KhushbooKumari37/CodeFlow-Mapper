@@ -15,14 +15,19 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.resolution.TypeSolver;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
+import org.eclipse.jgit.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -128,13 +133,12 @@ public class RepoMindMapGenerator {
                     .exceptionTypes(method.getThrownExceptions().stream()
                             .map(exception -> {
                                 try {
-                                    return Class.forName(exception.getClass().getName());  // Convert exception name to Class type
-                                } catch (ClassNotFoundException e) {
+                                    return exception.asString();  // Convert exception name to Class type
+                                } catch (Exception e) {
                                     e.printStackTrace();
                                     return null;
                                 }
-                            }).distinct()
-                            .toArray(Class<?>[]::new))
+                            }).distinct().collect(Collectors.toList()))
                     .modifiers(method.getModifiers().stream()
                             .map(modifier -> modifier.getKeyword().asString())
                             .collect(Collectors.toList()))
@@ -147,7 +151,7 @@ public class RepoMindMapGenerator {
                     .build();
             String methodKey = methodNode.getName() + "#" + methodNode.getNodeKey() + "#" + methodNode.getParameterTypes().size();
             methods.put(methodKey, methodNode);
-            relatedNodeCache.put(repoUrl,methodKey, methodNode);
+            relatedNodeCache.put(repoUrl, methodKey, methodNode);
         });
     }
 
@@ -155,32 +159,28 @@ public class RepoMindMapGenerator {
         JavaParser javaParser = new JavaParser();
         CompilationUnit cu = null;
       try {
-          TypeSolver typeSolver = new CombinedTypeSolver(new ReflectionTypeSolver());
+          TypeSolver typeSolver = new CombinedTypeSolver(new ReflectionTypeSolver(),new JavaParserTypeSolver(new File("/Users/monicas/Desktop/CodeFlow-Mapper/repos/spring-boot-application-example.git")));
+
           JavaSymbolSolver symbolSolver = new JavaSymbolSolver(typeSolver);
           javaParser.getParserConfiguration().setSymbolResolver(symbolSolver);
-          cu = javaParser.parse(file).getResult().orElseThrow(() -> new RuntimeException("Failed to parse Java file"));
-          String packageName = cu.getPackageDeclaration().map(pd -> pd.getNameAsString()).orElse("");
-
           cu = javaParser.parse(file).getResult().orElseThrow(() -> new RuntimeException("Failed to parse Java file"));
           cu.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
 
               String name = methodDeclaration.getNameAsString();
               List<MethodNode> methodNodes = new ArrayList<>();
-              Optional<String> mainClassName = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+name);
-              if(mainClassName.isPresent()) {
+              String mainClassName = methodDeclaration.resolve().getClassName();
+              String packageName = methodDeclaration.resolve().getPackageName();
+              if(!StringUtils.isEmptyOrNull(mainClassName)) {
                   methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
                       String methodName = m.getNameAsString();
-
                       Optional<String> className = relatedNodeCache.getMethodsForClass(repoUrl, packageName + "#" + methodName);
                       if (className.isPresent()) {
-                          System.out.print(name + " method - " + methodName);
-                          System.out.println(" " + className.get() + " - ");
-                          String methodNodeKey = name + "#" + packageName + "." + className.get() + "#" + m.getArguments().size();
+                          String methodNodeKey = methodName + "#" + packageName + "." + className.get() + "#" + m.getArguments().size();
                           Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl, methodNodeKey);
                           methodNode.ifPresent(methodNodes::add);
                       }
                   });
-                  String methodNodeKey = name + "#" + packageName + "." + mainClassName.get() + "#" + methodDeclaration.getParameters().size();
+                  String methodNodeKey = name + "#" + packageName + "." + mainClassName + "#" + methodDeclaration.getParameters().size();
                   if (!methodNodes.isEmpty()) {
                       relatedNodeCache.put2(repoUrl, methodNodeKey, methodNodes);
                   }
