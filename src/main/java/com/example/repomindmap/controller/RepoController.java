@@ -15,9 +15,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -79,9 +81,24 @@ public class RepoController {
         return new ResponseEntity<>("Cache cleared.", HttpStatus.OK);
     }
 
+
     @PostMapping("/repo/getAll")
-    public ResponseEntity<Set<String>> getAllNodeKeys (@RequestBody Map<String, String> request) {
-        return new ResponseEntity<>(repoCache.getRepoData(request.get("repoUrl")).get().getMindMap().keySet(), HttpStatus.OK);
+    public ResponseEntity<Map<String, List<String>>> getAllNodeKeys(@RequestBody Map<String, String> request) {
+        Optional<RepoCache.RepoData> repoDataOptional = repoCache.getRepoData(request.get("repoUrl"));
+        if (repoDataOptional.isPresent()) {
+            Map<String, List<String>> groupedByPackage = repoDataOptional.get().getMindMap().keySet()
+                    .stream()
+                    .collect(Collectors.groupingBy(
+                            key -> key.substring(0, key.lastIndexOf('.')),
+                            Collectors.mapping(
+                                    key -> key.substring(key.lastIndexOf('.') + 1),
+                                    Collectors.toList()
+                            )
+                    ));
+            return new ResponseEntity<>(groupedByPackage, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @PostMapping("/repo/getNodeInfo")
