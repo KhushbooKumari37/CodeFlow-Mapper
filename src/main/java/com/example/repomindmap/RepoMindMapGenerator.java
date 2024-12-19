@@ -68,7 +68,7 @@ public class RepoMindMapGenerator {
         // Find methods
         Map<String, MethodNode> methods = new HashMap<>();
         methodExtractor(unit, methods, node.getPackageName(), node.getName());
-        node.setMethodList(methods.values().stream().toList());
+        node.setMethodList(methods.values().stream().collect(Collectors.toList()));
         node.setModifiers(unit.getModifiers().stream().map(modifier -> modifier.getKeyword().asString()).collect(Collectors.toList()));
         node.setAnnotations(unit.getAnnotations().stream().map(annotationExpr -> annotationExpr.getName().asString()).collect(Collectors.toList()));
         return node;
