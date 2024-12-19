@@ -162,47 +162,4 @@ public class RepoController {
         }
     }
 
-    @PostMapping("/repo/findLinkMethods")
-    public ResponseEntity<List<String>> findLinkMethods(@RequestBody RepoNodeRequest request) {
-        try {
-            ClassOrInterfaceNode node = repoCache.getRepoData(request.getRepoUrl())
-                    .orElseThrow(() -> new NoSuchElementException("Repository data not found"))
-                    .getMindMap()
-                    .get(request.getNodeKey());
-
-            if (node == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-            }
-
-            List<String> methodLinks = findMethodLinks(node, request.getMethodName());
-
-            return new ResponseEntity<>(methodLinks, HttpStatus.OK);
-        } catch (NoSuchElementException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    private List<String> findMethodLinks(ClassOrInterfaceNode node, String methodName) {
-        List<String> links = new ArrayList<>();
-
-        if (node.getMethodList() != null) {
-            for (MethodNode method : node.getMethodList()) {
-                if (method.getName().equals(methodName)) {
-                    String methodBody = method.getBody();
-                    if (methodBody != null) {
-                        // Regex to capture method call pattern in the body
-                        String regex = "\\b" + methodName + "\\s*\\(";
-                        Pattern pattern = Pattern.compile(regex);
-                        Matcher matcher = pattern.matcher(methodBody);
-                        while (matcher.find()) {
-                            String foundMethod = matcher.group();
-                            links.add("Method " + methodName + " links to " + foundMethod);
-                        }
-                    }
-                }
-            }
-        }
-
-        return links;
-    }
 }
