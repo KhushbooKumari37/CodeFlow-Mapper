@@ -4,6 +4,7 @@ import com.example.repomindmap.model.ClassOrInterfaceNode;
 import com.example.repomindmap.model.MethodNode;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
@@ -38,7 +39,7 @@ public class RepoMindMapGenerator {
             JavaParser javaParser = new JavaParser();
             CompilationUnit cu = javaParser.parse(file).getResult().orElseThrow(() -> new RuntimeException("Failed to parse Java file"));
             cu.findAll(ClassOrInterfaceDeclaration.class).forEach(unit -> {
-                ClassOrInterfaceNode node = getClassOrInterfaceNode(unit);
+                ClassOrInterfaceNode node = getClassOrInterfaceNode(unit, cu.getPackageDeclaration().orElseGet(PackageDeclaration::new));
                 classInfoMap.put(node.getNodeKey(), node);
             });
         } catch (Exception e) {
@@ -46,8 +47,8 @@ public class RepoMindMapGenerator {
         }
     }
 
-    private static ClassOrInterfaceNode getClassOrInterfaceNode(ClassOrInterfaceDeclaration unit) {
-        String packageName = unit.getMetaModel().getPackageName();
+    private static ClassOrInterfaceNode getClassOrInterfaceNode(ClassOrInterfaceDeclaration unit, PackageDeclaration packageDeclaration) {
+        String packageName = packageDeclaration.getNameAsString();
         String name = unit.getNameAsString();
         ClassOrInterfaceNode node = ClassOrInterfaceNode.builder().packageName(packageName).name(name).nodeKey(packageName+ DOT +name).build();
         List<ClassOrInterfaceNode> extendNodes = new ArrayList<>();
@@ -66,7 +67,7 @@ public class RepoMindMapGenerator {
         node.setImplementsNode(implementNodes);
         // Find methods
         Map<String, MethodNode> methods = new HashMap<>();
-        methodExtractor(unit, methods, node.getNodeKey());
+        methodExtractor(unit, methods, node.getPackageName(), node.getName());
         node.setMethodList(methods.values().stream().toList());
         node.setModifiers(unit.getModifiers().stream().map(modifier -> modifier.getKeyword().asString()).collect(Collectors.toList()));
         node.setAnnotations(unit.getAnnotations().stream().map(annotationExpr -> annotationExpr.getName().asString()).collect(Collectors.toList()));
@@ -81,7 +82,7 @@ public class RepoMindMapGenerator {
         return extendNode;
     }
 
-    private static void methodExtractor(ClassOrInterfaceDeclaration unit, Map<String, MethodNode> methods, String nodeKey) {
+    private static void methodExtractor(ClassOrInterfaceDeclaration unit, Map<String, MethodNode> methods, String packageName, String className) {
         unit.getMethods().forEach(method -> {
             MethodNode methodNode = MethodNode.builder()
                     .name(method.getNameAsString())  // Set the method name
@@ -105,7 +106,9 @@ public class RepoMindMapGenerator {
                     .signature(method.getDeclarationAsString())  // Get the method signature (name + parameters + return type)
                     .annotations(method.getAnnotations().stream().map(annotationExpr -> annotationExpr.getName().asString()).collect(Collectors.toList()))
                     .body(method.getBody().map(BlockStmt::toString).orElse(""))
-                    .nodeKey(nodeKey)
+                    .nodeKey(packageName+DOT+className)
+                    .className(className)
+                    .packageName(packageName)
                     .build();
             System.out.println(methodNode);
             String methodKey = methodNode.getName() + "#" + methodNode.getNodeKey() + "#" + methodNode.getParameterTypes().size();
