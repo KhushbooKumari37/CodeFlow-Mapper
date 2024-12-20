@@ -17,6 +17,8 @@ public class RelatedNodeCache {
     private static final Map<String, Map<String, List<MethodNode>>> cache2 = new HashMap<>();
     private static final Map<String, Map<String, String>> classCache = new HashMap<>();
 
+    private static final Map<String, Map<String, String>> methodCacheNames = new HashMap<>();
+
     private static final Logger logger = Logger.getLogger(RelatedNodeCache.class.getName());
     private static final long TTL = 3600000;
 
@@ -38,9 +40,20 @@ public class RelatedNodeCache {
         cache2.computeIfAbsent(repoUrl, k -> new HashMap<>()).put(methodKey, methodNodes);
     }
 
+
+
     public Optional<String> getMethodsForClass(String repoUrl, String methodKey) {
         Map<String, String> repoCache = classCache.get(repoUrl);
         return repoCache != null ? Optional.ofNullable(repoCache.get(methodKey)) : Optional.empty();
+    }
+    public Optional<String> getMethodCacheNames(String repoUrl, String methodKey) {
+
+        Map<String, String> repoCache = methodCacheNames.get(repoUrl);
+        return repoCache != null ? Optional.ofNullable(repoCache.get(methodKey)) : Optional.empty();
+    }
+
+    public void putMethodCacheClassNames(String repoUrl, String methodKey, String className) {
+        methodCacheNames.computeIfAbsent(repoUrl, k -> new HashMap<>()).put(methodKey, className);
     }
 
     public void putClassCache(String repoUrl, String methodKey, String className) {

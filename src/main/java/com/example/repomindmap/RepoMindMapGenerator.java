@@ -17,7 +17,6 @@ import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
-import org.eclipse.jgit.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -156,6 +155,7 @@ public class RepoMindMapGenerator {
                     .build();
             String methodKey = methodNode.getName() + "#" + methodNode.getNodeKey() + "#" + methodNode.getParameterTypes().size();
             methods.put(methodKey, methodNode);
+            relatedNodeCache.putMethodCacheClassNames(repoUrl, methodNode.getName(), packageName+DOT+className);
             relatedNodeCache.put(repoUrl, methodKey, methodNode);
         });
     }
@@ -172,23 +172,24 @@ public class RepoMindMapGenerator {
           JavaSymbolSolver symbolSolver = new JavaSymbolSolver(typeSolver);
           javaParser.getParserConfiguration().setSymbolResolver(symbolSolver);
           cu = javaParser.parse(file).getResult().orElseThrow(() -> new RuntimeException("Failed to parse Java file"));
+          String packageName = cu.getPackageDeclaration().map(pd -> pd.getNameAsString()).orElse("");
           cu.findAll(MethodDeclaration.class).forEach(methodDeclaration -> {
 
               String name = methodDeclaration.getNameAsString();
               List<MethodNode> methodNodes = new ArrayList<>();
-              String mainClassName = methodDeclaration.resolve().getClassName();
-              String packageName = methodDeclaration.resolve().getPackageName();
-              if(!StringUtils.isEmptyOrNull(mainClassName)) {
+              Optional<String> mainClassName = relatedNodeCache.getMethodsForClass(repoUrl,packageName+"#"+name);
+              if(mainClassName.isPresent()) {
                   methodDeclaration.findAll(MethodCallExpr.class).forEach(m -> {
                       String methodName = m.getNameAsString();
-                      Optional<String> className = relatedNodeCache.getMethodsForClass(repoUrl, packageName + "#" + methodName);
+//                      Optional<String> className = relatedNodeCache.getMethodsForClass(repoUrl, packageName + "#" + methodName);
+                      Optional<String> className = relatedNodeCache.getMethodCacheNames(repoUrl,methodName);
                       if (className.isPresent()) {
-                          String methodNodeKey = methodName + "#" + packageName + "." + className.get() + "#" + m.getArguments().size();
+                          String methodNodeKey = methodName + "#" + className.get() + "#" + m.getArguments().size();
                           Optional<MethodNode> methodNode = relatedNodeCache.getMethodData(repoUrl, methodNodeKey);
                           methodNode.ifPresent(methodNodes::add);
                       }
                   });
-                  String methodNodeKey = name + "#" + packageName + "." + mainClassName + "#" + methodDeclaration.getParameters().size();
+                  String methodNodeKey = name + "#" + packageName + "." + mainClassName.get() + "#" + methodDeclaration.getParameters().size();
                   if (!methodNodes.isEmpty()) {
                       relatedNodeCache.put2(repoUrl, methodNodeKey, methodNodes);
                   }
